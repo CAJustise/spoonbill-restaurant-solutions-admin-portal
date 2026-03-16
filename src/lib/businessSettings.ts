@@ -9,7 +9,12 @@ export interface BusinessSettings {
   businessLogoUrl: string;
 }
 
-export const BUSINESS_SETTINGS_STORAGE_KEY = 'spoonbill_business_settings_v1';
+const STORAGE_SCOPE = String(import.meta.env.BASE_URL || '/')
+  .trim()
+  .replace(/^\/+|\/+$/g, '')
+  .replace(/[^a-zA-Z0-9_-]/g, '_') || 'root';
+
+export const BUSINESS_SETTINGS_STORAGE_KEY = `spoonbill_business_settings_${STORAGE_SCOPE}_v1`;
 export const BUSINESS_SETTINGS_UPDATED_EVENT = 'spoonbill:business-settings-updated';
 
 const DEFAULT_SETTINGS: BusinessSettings = {

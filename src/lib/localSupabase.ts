@@ -5,10 +5,16 @@ import { CODA_FOOD_ITEM_SEEDS, CUISINE_SUBCATEGORY_SEEDS } from './codaFoodSeeds
 
 type PlainObject = Record<string, any>;
 
-const DB_KEY = 'spoonbill.local.db.v1';
-const USERS_KEY = 'spoonbill.local.users.v1';
-const SESSION_KEY = 'spoonbill.local.session.v1';
-const FILES_KEY = 'spoonbill.local.files.v1';
+const STORAGE_SCOPE = String(import.meta.env.BASE_URL || '/')
+  .trim()
+  .replace(/^\/+|\/+$/g, '')
+  .replace(/[^a-zA-Z0-9_-]/g, '_') || 'root';
+
+const STORAGE_KEY_PREFIX = `spoonbill.${STORAGE_SCOPE}`;
+const DB_KEY = `${STORAGE_KEY_PREFIX}.local.db.v1`;
+const USERS_KEY = `${STORAGE_KEY_PREFIX}.local.users.v1`;
+const SESSION_KEY = `${STORAGE_KEY_PREFIX}.local.session.v1`;
+const FILES_KEY = `${STORAGE_KEY_PREFIX}.local.files.v1`;
 
 const FK_TABLE_MAP: Record<string, string> = {
   category_id: 'menu_categories',
