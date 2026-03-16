@@ -102,7 +102,7 @@ const Settings: React.FC = () => {
                 value={settings.businessName}
                 onChange={(event) => updateSetting('businessName', event.target.value)}
                 className="w-full px-3 py-2 border rounded-lg"
-                placeholder="The Spoonbill Lounge"
+                placeholder="SRS Admin Portal Demo"
                 required
               />
             </div>

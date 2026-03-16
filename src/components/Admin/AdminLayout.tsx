@@ -151,7 +151,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>({});
   const [capabilities, setCapabilities] = useState<PortalCapabilities>(EMPTY_CAPABILITIES);
   const [adminLogoUrl, setAdminLogoUrl] = useState('');
-  const [businessName, setBusinessName] = useState('The Spoonbill Lounge');
+  const [businessName, setBusinessName] = useState('SRS Admin Portal Demo');
   const [businessType, setBusinessType] = useState<RestaurantBusinessType>('full_service');
   const isFastCasualLike = businessType === 'fast_casual' || businessType === 'quick_serve';
 
@@ -212,7 +212,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
     const syncBusinessSettings = () => {
       const settings = getBusinessSettings();
       setAdminLogoUrl(String(settings.businessLogoUrl || '').trim());
-      setBusinessName(String(settings.businessName || 'The Spoonbill Lounge').trim() || 'The Spoonbill Lounge');
+      setBusinessName(
+        String(settings.businessName || 'SRS Admin Portal Demo').trim() || 'SRS Admin Portal Demo',
+      );
       setBusinessType(settings.businessType);
     };
 

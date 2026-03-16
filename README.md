@@ -1,4 +1,4 @@
-# Spoonbill Restaurant Solutions, Admin Portal
+# SRS Admin Portal Template
 
 Reusable BOH/operations portal core for restaurant projects.
 
@@ -26,8 +26,8 @@ App entry:
 
 Default local admin login:
 
-- Email: `admin@spoonbill.local`
-- Password: `spoonbill-admin`
+- Email: `admin@srs.local`
+- Password: `srs-admin`
 
 ## Reuse For New Projects
 
@@ -43,6 +43,7 @@ Default local admin login:
 ## GitHub Pages Base Path
 
 Vite base path is auto-derived from `GITHUB_REPOSITORY`, so this repo works when renamed or copied to a new repository.
+For example, if the repo is named `SRS-admin-portal`, the admin URL becomes `/SRS-admin-portal/admin`.
 
 ## Optional Remote Supabase Mode
 

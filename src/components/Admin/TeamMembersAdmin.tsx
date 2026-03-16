@@ -23,10 +23,10 @@ interface TeamMember {
 }
 
 const DUMMY_LOGIN_PASSWORDS: Record<string, string> = {
-  'hostlead@spoonbill.local': 'spoonbill-hostlead',
-  'linecook@spoonbill.local': 'spoonbill-linecook',
-  'bartender@spoonbill.local': 'spoonbill-bartender',
-  'server@spoonbill.local': 'spoonbill-server',
+  'hostlead@srs.local': 'srs-hostlead',
+  'linecook@srs.local': 'srs-linecook',
+  'bartender@srs.local': 'srs-bartender',
+  'server@srs.local': 'srs-server',
 };
 
 const TeamMembersAdmin: React.FC = () => {

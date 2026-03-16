@@ -2365,7 +2365,7 @@ const WorkforceManagement: React.FC = () => {
                         value={employeeDraft.login_username}
                         onChange={(event) => setEmployeeDraft((current) => ({ ...current, login_username: event.target.value }))}
                         className="w-full px-3 py-2 border rounded-lg"
-                        placeholder="employee@spoonbill.local"
+                        placeholder="employee@srs.local"
                       />
                     </div>
                     <div>

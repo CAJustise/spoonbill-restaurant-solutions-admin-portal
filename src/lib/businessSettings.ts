@@ -19,7 +19,7 @@ export const BUSINESS_SETTINGS_UPDATED_EVENT = 'spoonbill:business-settings-upda
 
 const DEFAULT_SETTINGS: BusinessSettings = {
   businessType: 'full_service',
-  businessName: 'The Spoonbill Lounge',
+  businessName: 'SRS Admin Portal Demo',
   unitNumber: '',
   businessAddress: '',
   businessPhone: '',

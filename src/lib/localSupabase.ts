@@ -34,23 +34,23 @@ const ALIAS_TABLE_MAP: Record<string, string> = {
 };
 
 const DEFAULT_ADMIN_USER_ID = 'admin_local_owner';
-const DEFAULT_ADMIN_EMAIL = 'admin@spoonbill.local';
-const DEFAULT_ADMIN_PASSWORD = 'spoonbill-admin';
+const DEFAULT_ADMIN_EMAIL = 'admin@srs.local';
+const DEFAULT_ADMIN_PASSWORD = 'srs-admin';
 const DEFAULT_HOST_USER_ID = 'host_local_user';
-const DEFAULT_HOST_EMAIL = 'host@spoonbill.local';
-const DEFAULT_HOST_PASSWORD = 'spoonbill-host';
+const DEFAULT_HOST_EMAIL = 'host@srs.local';
+const DEFAULT_HOST_PASSWORD = 'srs-host';
 const DEFAULT_HOST_LEAD_USER_ID = 'host_local_lead';
-const DEFAULT_HOST_LEAD_EMAIL = 'hostlead@spoonbill.local';
-const DEFAULT_HOST_LEAD_PASSWORD = 'spoonbill-hostlead';
+const DEFAULT_HOST_LEAD_EMAIL = 'hostlead@srs.local';
+const DEFAULT_HOST_LEAD_PASSWORD = 'srs-hostlead';
 const DEFAULT_LINE_COOK_USER_ID = 'staff_local_line_cook';
-const DEFAULT_LINE_COOK_EMAIL = 'linecook@spoonbill.local';
-const DEFAULT_LINE_COOK_PASSWORD = 'spoonbill-linecook';
+const DEFAULT_LINE_COOK_EMAIL = 'linecook@srs.local';
+const DEFAULT_LINE_COOK_PASSWORD = 'srs-linecook';
 const DEFAULT_BARTENDER_USER_ID = 'staff_local_bartender';
-const DEFAULT_BARTENDER_EMAIL = 'bartender@spoonbill.local';
-const DEFAULT_BARTENDER_PASSWORD = 'spoonbill-bartender';
+const DEFAULT_BARTENDER_EMAIL = 'bartender@srs.local';
+const DEFAULT_BARTENDER_PASSWORD = 'srs-bartender';
 const DEFAULT_SERVER_USER_ID = 'staff_local_server';
-const DEFAULT_SERVER_EMAIL = 'server@spoonbill.local';
-const DEFAULT_SERVER_PASSWORD = 'spoonbill-server';
+const DEFAULT_SERVER_EMAIL = 'server@srs.local';
+const DEFAULT_SERVER_PASSWORD = 'srs-server';
 const TASTING_MENU_MIGRATION_FLAG = 'tastings_seed_20260315';
 
 const DEFAULT_PASSWORD_BY_EMAIL: Record<string, string> = {
