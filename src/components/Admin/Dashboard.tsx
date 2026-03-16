@@ -22,6 +22,11 @@ import {
   type PortalCapabilities,
 } from '../../lib/bohRoles';
 import { calculateCaliforniaLaborSummary } from '../../lib/caLabor';
+import {
+  BUSINESS_SETTINGS_UPDATED_EVENT,
+  getBusinessSettings,
+  type RestaurantBusinessType,
+} from '../../lib/businessSettings';
 
 interface WorkforceShift {
   id: string;
@@ -133,6 +138,15 @@ interface MenuItemRecord {
   out_of_stock?: boolean;
 }
 
+interface DriveThruOrderRecord {
+  id: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  drive_time_seconds?: number | null;
+  status?: string | null;
+  created_at?: string | null;
+}
+
 const EMPTY_CAPABILITIES: PortalCapabilities = {
   canViewReservations: false,
   canViewEventsParties: false,
@@ -185,6 +199,25 @@ const addDays = (value: Date, days: number) => {
   return next;
 };
 
+const formatSecondsAsMinutes = (seconds: number | null) => {
+  if (seconds === null || !Number.isFinite(seconds)) return '--';
+  const rounded = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(rounded / 60);
+  const remainder = rounded % 60;
+  return `${minutes}m ${String(remainder).padStart(2, '0')}s`;
+};
+
+const parseDriveSeconds = (order: DriveThruOrderRecord) => {
+  if (typeof order.drive_time_seconds === 'number' && Number.isFinite(order.drive_time_seconds)) {
+    return Math.max(0, order.drive_time_seconds);
+  }
+  if (!order.started_at || !order.completed_at) return null;
+  const startedAt = new Date(order.started_at).getTime();
+  const completedAt = new Date(order.completed_at).getTime();
+  if (Number.isNaN(startedAt) || Number.isNaN(completedAt) || completedAt <= startedAt) return null;
+  return (completedAt - startedAt) / 1000;
+};
+
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [savingAction, setSavingAction] = useState(false);
@@ -206,6 +239,8 @@ const Dashboard: React.FC = () => {
   const [breaks, setBreaks] = useState<WorkforceBreak[]>([]);
   const [tasks, setTasks] = useState<WorkforceTask[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemRecord[]>([]);
+  const [driveThruOrders, setDriveThruOrders] = useState<DriveThruOrderRecord[]>([]);
+  const [businessType, setBusinessType] = useState<RestaurantBusinessType>('full_service');
   const [showLogEntryForm, setShowLogEntryForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showEightySixForm, setShowEightySixForm] = useState(false);
@@ -248,6 +283,7 @@ const Dashboard: React.FC = () => {
         breaksRes,
         tasksRes,
         menuItemsRes,
+        driveThruOrdersRes,
       ] = await Promise.all([
         supabase.from('workforce_shifts').select('*').order('start_time'),
         supabase.from('workforce_roles').select('*').order('name'),
@@ -263,6 +299,7 @@ const Dashboard: React.FC = () => {
         supabase.from('workforce_breaks').select('*').order('start_time', { ascending: false }),
         supabase.from('workforce_tasks').select('*').order('due_time'),
         supabase.from('menu_items').select('*').order('name'),
+        supabase.from('drive_thru_orders').select('*').order('created_at', { ascending: false }),
       ]);
 
       setCapabilities(nextCapabilities);
@@ -280,6 +317,7 @@ const Dashboard: React.FC = () => {
       setBreaks((breaksRes.data as WorkforceBreak[]) || []);
       setTasks((tasksRes.data as WorkforceTask[]) || []);
       setMenuItems((menuItemsRes.data as MenuItemRecord[]) || []);
+      setDriveThruOrders((driveThruOrdersRes.data as DriveThruOrderRecord[]) || []);
       setCurrentUserName(teamMember?.name || userEmail || 'Manager');
     },
     [],
@@ -313,10 +351,26 @@ const Dashboard: React.FC = () => {
     };
   }, [loadDashboardData]);
 
-  const today = new Date();
-  const todayKey = today.toISOString().slice(0, 10);
-  const currentWeekStart = useMemo(() => startOfWeek(today), [todayKey]);
-  const currentWeekEnd = useMemo(() => addDays(currentWeekStart, 7), [currentWeekStart]);
+  useEffect(() => {
+    const syncBusinessType = () => {
+      setBusinessType(getBusinessSettings().businessType);
+    };
+
+    syncBusinessType();
+    window.addEventListener(BUSINESS_SETTINGS_UPDATED_EVENT, syncBusinessType as EventListener);
+    window.addEventListener('storage', syncBusinessType);
+
+    return () => {
+      window.removeEventListener(BUSINESS_SETTINGS_UPDATED_EVENT, syncBusinessType as EventListener);
+      window.removeEventListener('storage', syncBusinessType);
+    };
+  }, []);
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const currentWeekStart = startOfWeek(new Date());
+  const currentWeekEnd = addDays(currentWeekStart, 7);
+  const isFastCasual = businessType === 'fast_casual';
+  const isQuickServe = businessType === 'quick_serve';
 
   const employeeById = useMemo(
     () =>
@@ -428,6 +482,58 @@ const Dashboard: React.FC = () => {
     };
   }, [classBookings, eventBookings, reservations, todayKey]);
 
+  const driveThruSummary = useMemo(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toISOString().slice(0, 10);
+
+    const completedOrders = driveThruOrders
+      .map((order) => ({
+        order,
+        seconds: parseDriveSeconds(order),
+        completedAt: order.completed_at ? new Date(order.completed_at) : null,
+      }))
+      .filter((entry) => entry.completedAt && entry.seconds !== null) as Array<{
+      order: DriveThruOrderRecord;
+      seconds: number;
+      completedAt: Date;
+    }>;
+
+    const todayCompleted = completedOrders.filter(
+      (entry) => toDateKey(entry.completedAt.toISOString()) === todayKey,
+    );
+    const yesterdayCompleted = completedOrders.filter(
+      (entry) => toDateKey(entry.completedAt.toISOString()) === yesterdayKey,
+    );
+    const yesterdayDay = yesterdayCompleted.filter((entry) => {
+      const hour = entry.completedAt.getHours();
+      return hour >= 6 && hour < 18;
+    });
+    const yesterdayNight = yesterdayCompleted.filter((entry) => {
+      const hour = entry.completedAt.getHours();
+      return hour < 6 || hour >= 18;
+    });
+
+    const inProgressCars = driveThruOrders.filter((order) => {
+      const status = String(order.status || '').toLowerCase();
+      if (status === 'in_progress' || status === 'active' || status === 'open') return true;
+      if (status === 'completed') return false;
+      return Boolean(order.started_at) && !order.completed_at;
+    }).length;
+
+    const averageSeconds = (values: Array<{ seconds: number }>) => {
+      if (!values.length) return null;
+      return values.reduce((total, entry) => total + entry.seconds, 0) / values.length;
+    };
+
+    return {
+      liveCars: inProgressCars,
+      averageDriveTimeSeconds: averageSeconds(todayCompleted),
+      yesterdayDaySeconds: averageSeconds(yesterdayDay),
+      yesterdayNightSeconds: averageSeconds(yesterdayNight),
+    };
+  }, [driveThruOrders, todayKey]);
+
   const openPunches = useMemo(() => punches.filter((punch) => !punch.clock_out), [punches]);
 
   const laborSummary = useMemo(() => {
@@ -537,16 +643,14 @@ const Dashboard: React.FC = () => {
   const eightySixItems = useMemo(
     () =>
       menuItems
-        .filter((item) => Boolean(item.is_86d || item.eighty_six || item.out_of_stock))
+        .filter((item) => item.is_86d || item.eighty_six || item.out_of_stock)
         .slice(0, 16),
     [menuItems],
   );
 
   const availableEightySixItems = useMemo(
     () =>
-      menuItems.filter(
-        (item) => !Boolean(item.is_86d || item.eighty_six || item.out_of_stock),
-      ),
+      menuItems.filter((item) => !(item.is_86d || item.eighty_six || item.out_of_stock)),
     [menuItems],
   );
 
@@ -922,7 +1026,10 @@ const Dashboard: React.FC = () => {
       <div className="max-w-none px-4 py-6 space-y-6">
         <div>
           <h1 className="text-3xl font-display font-bold text-gray-900">Nest</h1>
-          <p className="text-gray-600 font-garamond">Live view of scheduling, labor, reservations, alerts, and shift handoff intelligence.</p>
+          <p className="text-gray-600 font-garamond">
+            Live view of scheduling, labor, alerts, shift handoff intelligence
+            {isQuickServe ? ', and drive-thru throughput.' : isFastCasual ? '.' : ', and reservations.'}
+          </p>
         </div>
 
         {!hasAnySectionAccess(capabilities) && (
@@ -1046,26 +1153,74 @@ const Dashboard: React.FC = () => {
         )}
 
         {(canSeeOperations || canSeeWorkforce) && (
-          <section className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <section className={`grid md:grid-cols-2 ${isFastCasual ? 'lg:grid-cols-3' : 'lg:grid-cols-5'} gap-4`}>
             <div className="bg-white rounded-lg shadow p-4">
               <div className="text-sm text-gray-500 uppercase tracking-wide">Today&apos;s Schedule</div>
               <div className="text-2xl font-display font-bold text-gray-900">{shiftsToday.length}</div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500 uppercase tracking-wide">Reservations Total</div>
-              <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalAll}</div>
+            {isFastCasual ? (
+              <>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide">Clocked In</div>
+                  <div className="text-2xl font-display font-bold text-gray-900">{laborSummary.openPunches}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide">Cleaning Alerts</div>
+                  <div className="text-2xl font-display font-bold text-gray-900">{stationAlerts.length}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide">Reservations Total</div>
+                  <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalAll}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide">Dining Reservations</div>
+                  <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalDining}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide">Event / Party Bookings</div>
+                  <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalEvents}</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 uppercase tracking-wide">Class Reservations</div>
+                  <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalClasses}</div>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
+        {isQuickServe && (canSeeOperations || canSeeWorkforce) && (
+          <section className="bg-white rounded-lg shadow p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-display font-bold text-gray-900">Drive Time Pulse</h2>
+              <div className="text-xs text-gray-500">QSR</div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500 uppercase tracking-wide">Dining Reservations</div>
-              <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalDining}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500 uppercase tracking-wide">Event / Party Bookings</div>
-              <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalEvents}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500 uppercase tracking-wide">Class Reservations</div>
-              <div className="text-2xl font-display font-bold text-gray-900">{reservationSummary.totalClasses}</div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs uppercase text-gray-500">Average Drive Time</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {formatSecondsAsMinutes(driveThruSummary.averageDriveTimeSeconds)}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs uppercase text-gray-500">Cars (Live)</div>
+                <div className="text-lg font-semibold text-gray-900">{driveThruSummary.liveCars}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs uppercase text-gray-500">Yesterday Avg (Day)</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {formatSecondsAsMinutes(driveThruSummary.yesterdayDaySeconds)}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-xs uppercase text-gray-500">Yesterday Avg (Night)</div>
+                <div className="text-lg font-semibold text-gray-900">
+                  {formatSecondsAsMinutes(driveThruSummary.yesterdayNightSeconds)}
+                </div>
+              </div>
             </div>
           </section>
         )}
@@ -1134,12 +1289,14 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-2 mt-4">
-                <div className="text-sm font-medium text-gray-700">Reservation Counts</div>
-                <div className="text-sm text-gray-600">Dining pending: {reservationSummary.pendingDining}</div>
-                <div className="text-sm text-gray-600">Events today: {reservationSummary.totalEvents}</div>
-                <div className="text-sm text-gray-600">Classes today: {reservationSummary.totalClasses}</div>
-              </div>
+              {!isFastCasual && (
+                <div className="space-y-2 mt-4">
+                  <div className="text-sm font-medium text-gray-700">Reservation Counts</div>
+                  <div className="text-sm text-gray-600">Dining pending: {reservationSummary.pendingDining}</div>
+                  <div className="text-sm text-gray-600">Events today: {reservationSummary.totalEvents}</div>
+                  <div className="text-sm text-gray-600">Classes today: {reservationSummary.totalClasses}</div>
+                </div>
+              )}
             </div>
           </section>
         )}
@@ -1226,7 +1383,7 @@ const Dashboard: React.FC = () => {
                 <div>
                   <h2 className="text-xl font-display font-bold text-gray-900 flex items-center gap-2">
                     <ClipboardList className="h-5 w-5 text-ocean-600" />
-                    Station Tasks
+                    Cleaning Calendar
                   </h2>
                   <div className="text-xs text-gray-500 mt-1">Open alerts: {stationAlerts.length}</div>
                 </div>
@@ -1236,7 +1393,7 @@ const Dashboard: React.FC = () => {
                   className="inline-flex items-center gap-1 px-3 py-1.5 border border-ocean-200 rounded-md text-ocean-700 hover:bg-ocean-50 text-sm"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Task
+                  Add Cleaning Task
                 </button>
               </div>
 
@@ -1301,7 +1458,7 @@ const Dashboard: React.FC = () => {
                     disabled={savingAction}
                     className="px-3 py-2 bg-ocean-600 text-white rounded-lg hover:bg-ocean-700 disabled:opacity-60"
                   >
-                    Save Task
+                    Save Cleaning Task
                   </button>
                 </form>
               )}
@@ -1347,7 +1504,7 @@ const Dashboard: React.FC = () => {
                       </div>
                     );
                   })}
-                {!tasks.length && <div className="text-sm text-gray-500">No station tasks yet.</div>}
+                {!tasks.length && <div className="text-sm text-gray-500">No cleaning tasks yet.</div>}
               </div>
             </div>
           </section>

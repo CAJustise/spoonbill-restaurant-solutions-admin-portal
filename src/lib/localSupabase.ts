@@ -1510,10 +1510,61 @@ const buildDefaultClassSessions = (events: PlainObject[]) =>
       created_at: nowIso(),
     }));
 
+const buildDefaultDriveThruOrders = () => {
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayDate = yesterday.toISOString().slice(0, 10);
+
+  const createCompletedOrder = (id: string, dateValue: string, startTime: string, driveSeconds: number) => {
+    const startedAt = new Date(`${dateValue}T${normalizeTimeValue(startTime)}`);
+    const completedAt = new Date(startedAt.getTime() + driveSeconds * 1000);
+    return {
+      id,
+      lane: 'drive_thru_a',
+      status: 'completed',
+      started_at: startedAt.toISOString(),
+      completed_at: completedAt.toISOString(),
+      drive_time_seconds: driveSeconds,
+      created_at: startedAt.toISOString(),
+      updated_at: completedAt.toISOString(),
+    };
+  };
+
+  const createLiveOrder = (id: string, ageSeconds: number) => {
+    const startedAt = new Date(now.getTime() - ageSeconds * 1000);
+    return {
+      id,
+      lane: 'drive_thru_a',
+      status: 'in_progress',
+      started_at: startedAt.toISOString(),
+      completed_at: null,
+      drive_time_seconds: null,
+      created_at: startedAt.toISOString(),
+      updated_at: nowIso(),
+    };
+  };
+
+  return [
+    createCompletedOrder('dto_y_day_1', yesterdayDate, '11:12', 248),
+    createCompletedOrder('dto_y_day_2', yesterdayDate, '13:45', 221),
+    createCompletedOrder('dto_y_day_3', yesterdayDate, '16:08', 236),
+    createCompletedOrder('dto_y_night_1', yesterdayDate, '19:05', 289),
+    createCompletedOrder('dto_y_night_2', yesterdayDate, '20:21', 276),
+    createCompletedOrder('dto_today_1', today, '09:34', 212),
+    createCompletedOrder('dto_today_2', today, '10:16', 226),
+    createCompletedOrder('dto_today_3', today, '12:02', 208),
+    createLiveOrder('dto_live_1', 190),
+    createLiveOrder('dto_live_2', 315),
+  ];
+};
+
 const buildDefaultDb = () => {
   const { categories, items } = seedMenu();
   const tastings = seedTastings();
   const workforceSeed = buildDefaultWorkforceSeed(defaultTeamMembers());
+  const driveThruOrders = buildDefaultDriveThruOrders();
   const seedEvents = [
     {
       id: 'event_mixology',
@@ -1560,6 +1611,7 @@ const buildDefaultDb = () => {
     events: seedEvents,
     class_sessions: buildDefaultClassSessions(seedEvents),
     time_slots: buildDefaultTimeSlots(),
+    drive_thru_orders: driveThruOrders,
     reservations: [],
     event_bookings: [],
     class_bookings: [],
@@ -3355,6 +3407,16 @@ const migrateDb = (db: PlainObject) => {
 
       return nextBooking;
     });
+  }
+
+  if (!Array.isArray(db.drive_thru_orders)) {
+    db.drive_thru_orders = [];
+    changed = true;
+  }
+
+  if (Array.isArray(db.drive_thru_orders) && db.drive_thru_orders.length === 0) {
+    db.drive_thru_orders = buildDefaultDriveThruOrders();
+    changed = true;
   }
 
   if (ensureTastingMenuImport(db)) {

@@ -200,6 +200,17 @@ interface WorkforcePtoBalance {
   updated_at?: string;
 }
 
+interface WorkforceAuthAdminApi {
+  createUser?: (payload: {
+    email: string;
+    password: string;
+  }) => Promise<{
+    data?: { user?: { id?: string | null } | null } | null;
+    error?: unknown;
+  }>;
+  updateUserById?: (userId: string, payload: Record<string, string>) => Promise<{ error?: unknown }>;
+}
+
 type ScheduleViewMode = 'week' | 'day';
 
 const formatDateTime = (value?: string | null) => {
@@ -411,6 +422,7 @@ const WorkforceManagement: React.FC = () => {
     hours: '8',
     notes: '',
   });
+  const showLegacyStationTasks = false;
 
   const fetchAll = async () => {
     const [
@@ -629,18 +641,6 @@ const WorkforceManagement: React.FC = () => {
         return accumulator;
       }, {} as Record<string, WorkforceEmployeeRoleAssignment[]>),
     [employeeRoles],
-  );
-
-  const primaryEmployeeRoleByEmployeeId = useMemo(
-    () =>
-      Object.entries(employeeRoleAssignmentsByEmployeeId).reduce((accumulator, [employeeId, assignments]) => {
-        const primary = assignments.find((assignment) => Boolean(assignment.primary_role)) || assignments[0];
-        if (primary) {
-          accumulator[employeeId] = primary;
-        }
-        return accumulator;
-      }, {} as Record<string, WorkforceEmployeeRoleAssignment>),
-    [employeeRoleAssignmentsByEmployeeId],
   );
 
   const roleRateByEmployeeIdRoleId = useMemo(
@@ -1155,7 +1155,11 @@ const WorkforceManagement: React.FC = () => {
       };
     }
 
-    const adminApi = (supabaseAdmin as any)?.auth?.admin;
+    const adminApi = (
+      supabaseAdmin as unknown as {
+        auth?: { admin?: WorkforceAuthAdminApi };
+      }
+    )?.auth?.admin;
     if (!adminApi) {
       return {
         userId: nextUserId,
@@ -3263,12 +3267,12 @@ const WorkforceManagement: React.FC = () => {
           </div>
         </section>
 
-        {false && (
+        {showLegacyStationTasks && (
           <>
             <section className="grid lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-lg shadow p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-display font-bold text-gray-900">Station Tasks</h2>
+              <h2 className="text-xl font-display font-bold text-gray-900">Cleaning Calendar</h2>
               <button
                 type="button"
                 onClick={() => setShowTaskForm((current) => !current)}

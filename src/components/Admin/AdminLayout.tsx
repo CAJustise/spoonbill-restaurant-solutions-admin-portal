@@ -34,7 +34,11 @@ import {
   type PortalCapabilities,
 } from '../../lib/bohRoles';
 import logoNavy from '../../assets/SpoonbillLogoDark.png';
-import { BUSINESS_SETTINGS_UPDATED_EVENT, getBusinessSettings } from '../../lib/businessSettings';
+import {
+  BUSINESS_SETTINGS_UPDATED_EVENT,
+  getBusinessSettings,
+  type RestaurantBusinessType,
+} from '../../lib/businessSettings';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -144,6 +148,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
   const [capabilities, setCapabilities] = useState<PortalCapabilities>(EMPTY_CAPABILITIES);
   const [adminLogoUrl, setAdminLogoUrl] = useState('');
   const [businessName, setBusinessName] = useState('The Spoonbill Lounge');
+  const [businessType, setBusinessType] = useState<RestaurantBusinessType>('full_service');
 
   useEffect(() => {
     let active = true;
@@ -203,6 +208,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
       const settings = getBusinessSettings();
       setAdminLogoUrl(String(settings.businessLogoUrl || '').trim());
       setBusinessName(String(settings.businessName || 'The Spoonbill Lounge').trim() || 'The Spoonbill Lounge');
+      setBusinessType(settings.businessType);
     };
 
     syncBusinessSettings();
@@ -215,6 +221,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
     };
   }, []);
 
+  useEffect(() => {
+    if (businessType !== 'fast_casual') return;
+    const viewingTastingMenus = location.pathname.startsWith('/admin/menu/tasting-menus');
+    const viewingReservations = location.pathname.startsWith('/admin/boh/');
+    if (!viewingTastingMenus && !viewingReservations) return;
+    navigate('/admin', { replace: true });
+  }, [businessType, location.pathname, navigate]);
+
   const sections = useMemo(() => {
     const nextSections: NavSection[] = [
       {
@@ -224,10 +238,21 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
     ];
 
     if (canAccessSection(capabilities, 'menu_management')) {
-      nextSections.push({ id: 'menu_management', heading: 'Menu Management', collapsible: true, items: MENU_ITEMS });
+      const visibleMenuItems =
+        businessType === 'fast_casual'
+          ? MENU_ITEMS.filter((item) => item.to !== '/admin/menu/tasting-menus')
+          : MENU_ITEMS;
+      if (visibleMenuItems.length > 0) {
+        nextSections.push({
+          id: 'menu_management',
+          heading: 'Menu Management',
+          collapsible: true,
+          items: visibleMenuItems,
+        });
+      }
     }
 
-    if (canAccessSection(capabilities, 'operations')) {
+    if (businessType !== 'fast_casual' && canAccessSection(capabilities, 'operations')) {
       const allowedOperationItems = OPERATIONS_ITEMS.filter((item) =>
         item.capability ? canAccessCapability(capabilities, item.capability) : true,
       );
@@ -272,7 +297,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
     }
 
     return nextSections;
-  }, [capabilities]);
+  }, [businessType, capabilities]);
 
   const navStateCookieName = useMemo(
     () => (currentUserId ? `${NAV_STATE_COOKIE_PREFIX}${currentUserId}` : ''),
