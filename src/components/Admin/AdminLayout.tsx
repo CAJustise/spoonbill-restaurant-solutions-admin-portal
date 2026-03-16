@@ -149,6 +149,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
   const [adminLogoUrl, setAdminLogoUrl] = useState('');
   const [businessName, setBusinessName] = useState('The Spoonbill Lounge');
   const [businessType, setBusinessType] = useState<RestaurantBusinessType>('full_service');
+  const isFastCasualLike = businessType === 'fast_casual' || businessType === 'quick_serve';
 
   useEffect(() => {
     let active = true;
@@ -222,12 +223,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
   }, []);
 
   useEffect(() => {
-    if (businessType !== 'fast_casual') return;
+    if (!isFastCasualLike) return;
     const viewingTastingMenus = location.pathname.startsWith('/admin/menu/tasting-menus');
     const viewingReservations = location.pathname.startsWith('/admin/boh/');
     if (!viewingTastingMenus && !viewingReservations) return;
     navigate('/admin', { replace: true });
-  }, [businessType, location.pathname, navigate]);
+  }, [isFastCasualLike, location.pathname, navigate]);
 
   const sections = useMemo(() => {
     const nextSections: NavSection[] = [
@@ -239,7 +240,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
 
     if (canAccessSection(capabilities, 'menu_management')) {
       const visibleMenuItems =
-        businessType === 'fast_casual'
+        isFastCasualLike
           ? MENU_ITEMS.filter((item) => item.to !== '/admin/menu/tasting-menus')
           : MENU_ITEMS;
       if (visibleMenuItems.length > 0) {
@@ -252,7 +253,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
       }
     }
 
-    if (businessType !== 'fast_casual' && canAccessSection(capabilities, 'operations')) {
+    if (!isFastCasualLike && canAccessSection(capabilities, 'operations')) {
       const allowedOperationItems = OPERATIONS_ITEMS.filter((item) =>
         item.capability ? canAccessCapability(capabilities, item.capability) : true,
       );
@@ -297,7 +298,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, requiredSection, re
     }
 
     return nextSections;
-  }, [businessType, capabilities]);
+  }, [capabilities, isFastCasualLike]);
 
   const navStateCookieName = useMemo(
     () => (currentUserId ? `${NAV_STATE_COOKIE_PREFIX}${currentUserId}` : ''),

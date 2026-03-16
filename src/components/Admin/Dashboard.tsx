@@ -371,6 +371,7 @@ const Dashboard: React.FC = () => {
   const currentWeekEnd = addDays(currentWeekStart, 7);
   const isFastCasual = businessType === 'fast_casual';
   const isQuickServe = businessType === 'quick_serve';
+  const isFastCasualLike = isFastCasual || isQuickServe;
 
   const employeeById = useMemo(
     () =>
@@ -1153,12 +1154,12 @@ const Dashboard: React.FC = () => {
         )}
 
         {(canSeeOperations || canSeeWorkforce) && (
-          <section className={`grid md:grid-cols-2 ${isFastCasual ? 'lg:grid-cols-3' : 'lg:grid-cols-5'} gap-4`}>
+          <section className={`grid md:grid-cols-2 ${isFastCasualLike ? 'lg:grid-cols-3' : 'lg:grid-cols-5'} gap-4`}>
             <div className="bg-white rounded-lg shadow p-4">
               <div className="text-sm text-gray-500 uppercase tracking-wide">Today&apos;s Schedule</div>
               <div className="text-2xl font-display font-bold text-gray-900">{shiftsToday.length}</div>
             </div>
-            {isFastCasual ? (
+            {isFastCasualLike ? (
               <>
                 <div className="bg-white rounded-lg shadow p-4">
                   <div className="text-sm text-gray-500 uppercase tracking-wide">Clocked In</div>
@@ -1289,7 +1290,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              {!isFastCasual && (
+              {!isFastCasualLike && (
                 <div className="space-y-2 mt-4">
                   <div className="text-sm font-medium text-gray-700">Reservation Counts</div>
                   <div className="text-sm text-gray-600">Dining pending: {reservationSummary.pendingDining}</div>
