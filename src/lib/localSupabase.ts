@@ -62,9 +62,38 @@ const DEFAULT_PASSWORD_BY_EMAIL: Record<string, string> = {
   [DEFAULT_SERVER_EMAIL.toLowerCase()]: DEFAULT_SERVER_PASSWORD,
 };
 
+const LEGACY_DEFAULT_CREDENTIALS_BY_USER_ID: Record<string, { email: string; password: string }> = {
+  [DEFAULT_ADMIN_USER_ID]: {
+    email: 'admin@spoonbill.local',
+    password: 'spoonbill-admin',
+  },
+  [DEFAULT_HOST_USER_ID]: {
+    email: 'host@spoonbill.local',
+    password: 'spoonbill-host',
+  },
+  [DEFAULT_HOST_LEAD_USER_ID]: {
+    email: 'hostlead@spoonbill.local',
+    password: 'spoonbill-hostlead',
+  },
+  [DEFAULT_LINE_COOK_USER_ID]: {
+    email: 'linecook@spoonbill.local',
+    password: 'spoonbill-linecook',
+  },
+  [DEFAULT_BARTENDER_USER_ID]: {
+    email: 'bartender@spoonbill.local',
+    password: 'spoonbill-bartender',
+  },
+  [DEFAULT_SERVER_USER_ID]: {
+    email: 'server@spoonbill.local',
+    password: 'spoonbill-server',
+  },
+};
+
 const nowIso = () => new Date().toISOString();
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
 
 const slug = (value: string) =>
   value
@@ -3453,9 +3482,37 @@ const ensureDefaultUsers = (users: PlainObject[]) => {
 
   defaultLocalUsers().forEach((defaultUser) => {
     const existing = getUserByIdentity(users, defaultUser.id, defaultUser.email);
-    if (existing) return;
-    users.push(defaultUser);
-    changed = true;
+    if (!existing) {
+      users.push(defaultUser);
+      changed = true;
+      return;
+    }
+
+    const existingEmail = normalizeEmail(String(existing.email || ''));
+    const defaultEmail = normalizeEmail(defaultUser.email);
+    const existingPassword = String(existing.password || '');
+    const legacyCredentials = LEGACY_DEFAULT_CREDENTIALS_BY_USER_ID[defaultUser.id];
+    const legacyEmail = normalizeEmail(String(legacyCredentials?.email || ''));
+    const legacyPassword = String(legacyCredentials?.password || '');
+
+    if (!existing.email || existingEmail === legacyEmail) {
+      if (existingEmail !== defaultEmail) {
+        existing.email = defaultUser.email;
+        changed = true;
+      }
+    }
+
+    if (!existing.password || (legacyPassword && existingPassword === legacyPassword)) {
+      if (existingPassword !== defaultUser.password) {
+        existing.password = defaultUser.password;
+        changed = true;
+      }
+    }
+
+    if (!existing.created_at) {
+      existing.created_at = defaultUser.created_at;
+      changed = true;
+    }
   });
 
   return changed;
