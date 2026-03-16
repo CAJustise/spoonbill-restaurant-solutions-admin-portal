@@ -15,6 +15,8 @@ const DB_KEY = `${STORAGE_KEY_PREFIX}.local.db.v1`;
 const USERS_KEY = `${STORAGE_KEY_PREFIX}.local.users.v1`;
 const SESSION_KEY = `${STORAGE_KEY_PREFIX}.local.session.v1`;
 const FILES_KEY = `${STORAGE_KEY_PREFIX}.local.files.v1`;
+const TEMPLATE_DATA_RESET_KEY = `${STORAGE_KEY_PREFIX}.template.reset.version`;
+const TEMPLATE_DATA_RESET_VERSION = 'srs_clean_template_v1';
 
 const FK_TABLE_MAP: Record<string, string> = {
   category_id: 'menu_categories',
@@ -1546,178 +1548,32 @@ const buildDefaultClassSessions = (events: PlainObject[]) =>
     }));
 
 const buildDefaultDriveThruOrders = () => {
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayDate = yesterday.toISOString().slice(0, 10);
-
-  const createCompletedOrder = (id: string, dateValue: string, startTime: string, driveSeconds: number) => {
-    const startedAt = new Date(`${dateValue}T${normalizeTimeValue(startTime)}`);
-    const completedAt = new Date(startedAt.getTime() + driveSeconds * 1000);
-    return {
-      id,
-      lane: 'drive_thru_a',
-      status: 'completed',
-      started_at: startedAt.toISOString(),
-      completed_at: completedAt.toISOString(),
-      drive_time_seconds: driveSeconds,
-      created_at: startedAt.toISOString(),
-      updated_at: completedAt.toISOString(),
-    };
-  };
-
-  const createLiveOrder = (id: string, ageSeconds: number) => {
-    const startedAt = new Date(now.getTime() - ageSeconds * 1000);
-    return {
-      id,
-      lane: 'drive_thru_a',
-      status: 'in_progress',
-      started_at: startedAt.toISOString(),
-      completed_at: null,
-      drive_time_seconds: null,
-      created_at: startedAt.toISOString(),
-      updated_at: nowIso(),
-    };
-  };
-
-  return [
-    createCompletedOrder('dto_y_day_1', yesterdayDate, '11:12', 248),
-    createCompletedOrder('dto_y_day_2', yesterdayDate, '13:45', 221),
-    createCompletedOrder('dto_y_day_3', yesterdayDate, '16:08', 236),
-    createCompletedOrder('dto_y_night_1', yesterdayDate, '19:05', 289),
-    createCompletedOrder('dto_y_night_2', yesterdayDate, '20:21', 276),
-    createCompletedOrder('dto_today_1', today, '09:34', 212),
-    createCompletedOrder('dto_today_2', today, '10:16', 226),
-    createCompletedOrder('dto_today_3', today, '12:02', 208),
-    createLiveOrder('dto_live_1', 190),
-    createLiveOrder('dto_live_2', 315),
-  ];
+  return [];
 };
 
 const buildDefaultDb = () => {
-  const { categories, items } = seedMenu();
-  const tastings = seedTastings();
-  const workforceSeed = buildDefaultWorkforceSeed(defaultTeamMembers());
-  const driveThruOrders = buildDefaultDriveThruOrders();
-  const seedEvents = [
-    {
-      id: 'event_mixology',
-      title: 'Island Mixology Class',
-      description: 'Hands-on class featuring three signature Spoonbill cocktails.',
-      date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-      time: '19:00:00',
-      price: 85,
-      image_url: 'https://raw.githubusercontent.com/CAJustise/the-spoonbill/main/public/images/library/misc/mixologyclass.png',
-      booking_type: 'class',
-      booking_url: null,
-      booking_capacity: 16,
-      booking_minimum: 1,
-      display_order: 1,
-      active: true,
-      created_at: nowIso(),
-    },
-    {
-      id: 'event_tasting',
-      title: 'Pacific Rim Tasting Night',
-      description: 'Chef-led tasting with paired cocktails.',
-      date: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
-      time: '18:30:00',
-      price: 125,
-      image_url: 'https://raw.githubusercontent.com/CAJustise/the-spoonbill/main/public/images/library/misc/tiki-noir.png',
-      booking_type: 'class',
-      booking_url: null,
-      booking_capacity: 28,
-      booking_minimum: 1,
-      display_order: 2,
-      active: true,
-      created_at: nowIso(),
-    },
-  ];
-
   return {
-    menu_categories: categories,
-    menu_items: items,
-    tasting_menus: tastings.menus,
-    tasting_menu_courses: tastings.courses,
-    tasting_menu_items: tastings.items,
+    menu_categories: [],
+    menu_items: [],
+    tasting_menus: [],
+    tasting_menu_courses: [],
+    tasting_menu_items: [],
     tasting_menu_templates: [],
     tasting_menu_course_templates: [],
-    events: seedEvents,
-    class_sessions: buildDefaultClassSessions(seedEvents),
-    time_slots: buildDefaultTimeSlots(),
-    drive_thru_orders: driveThruOrders,
+    events: [],
+    class_sessions: buildDefaultClassSessions([]),
+    time_slots: [],
+    drive_thru_orders: buildDefaultDriveThruOrders(),
     reservations: [],
     event_bookings: [],
     class_bookings: [],
     tables: [],
-    job_departments: [
-      { id: 'dept_service', name: 'Service', description: 'Front of house hospitality team', active: true, created_at: nowIso() },
-      { id: 'dept_bar', name: 'Bar', description: 'Cocktail and beverage operations', active: true, created_at: nowIso() },
-      { id: 'dept_kitchen', name: 'Kitchen', description: 'Culinary operations', active: true, created_at: nowIso() },
-    ],
-    job_types: [
-      { id: 'type_full_time', name: 'Full Time', code: 'FT', description: '40+ hours/week', active: true, created_at: nowIso() },
-      { id: 'type_part_time', name: 'Part Time', code: 'PT', description: 'Flexible schedule', active: true, created_at: nowIso() },
-      { id: 'type_seasonal', name: 'Seasonal', code: 'SE', description: 'Seasonal contract', active: true, created_at: nowIso() },
-    ],
-    job_listings: [
-      {
-        id: 'job_head_bartender',
-        title: 'Head Bartender',
-        description: 'Lead cocktail program execution and bar team development.',
-        requirements: [
-          '3+ years high-volume craft cocktail experience',
-          'Strong leadership and mentorship ability',
-          'Comfortable with inventory and cost controls',
-        ],
-        benefits: [
-          'Health benefits',
-          'Dining discounts',
-          'Performance bonuses',
-        ],
-        salary_min: 70000,
-        salary_max: 85000,
-        salary_type: 'yearly',
-        location: 'Santa Monica, CA',
-        is_featured: true,
-        active: true,
-        department_id: 'dept_bar',
-        job_type_id: 'type_full_time',
-        created_at: nowIso(),
-      },
-      {
-        id: 'job_line_cook',
-        title: 'Line Cook',
-        description: 'Execute service with precision and consistency.',
-        requirements: [
-          '2+ years fine dining prep and line experience',
-          'Knife skills and station discipline',
-          'Ability to maintain pace during peak service',
-        ],
-        benefits: [
-          'Health benefits',
-          'Daily staff meal',
-          'Growth pathway to sous chef',
-        ],
-        salary_min: 24,
-        salary_max: 30,
-        salary_type: 'hourly',
-        location: 'Santa Monica, CA',
-        is_featured: false,
-        active: true,
-        department_id: 'dept_kitchen',
-        job_type_id: 'type_full_time',
-        created_at: nowIso(),
-      },
-    ],
+    job_departments: [],
+    job_types: [],
+    job_listings: [],
     job_applications: [],
     investor_submissions: [],
-    image_categories: [
-      { id: 'img_cat_food', name: 'Cuisine', description: 'Food photography', active: true, created_at: nowIso() },
-      { id: 'img_cat_drinks', name: 'Cocktails', description: 'Drink photography', active: true, created_at: nowIso() },
-      { id: 'img_cat_space', name: 'Venue', description: 'Interior and ambiance', active: true, created_at: nowIso() },
-    ],
+    image_categories: [],
     images: [],
     image_metadata: [],
     admin_roles: [
@@ -1766,8 +1622,106 @@ const buildDefaultDb = () => {
         created_at: nowIso(),
       },
     ],
-    ...workforceSeed,
-    team_members: defaultTeamMembers(),
+    workforce_locations: [
+      {
+        id: WORKFORCE_DEFAULT_LOCATION_ID,
+        name: 'Main Location',
+        timezone: 'America/Los_Angeles',
+        active: true,
+        created_at: nowIso(),
+      },
+    ],
+    workforce_departments: [
+      { id: 'wf_dept_management', name: 'Management', active: true, created_at: nowIso() },
+      { id: 'wf_dept_service', name: 'Service', active: true, created_at: nowIso() },
+      { id: 'wf_dept_bar', name: 'Bar', active: true, created_at: nowIso() },
+      { id: 'wf_dept_kitchen', name: 'Kitchen', active: true, created_at: nowIso() },
+    ],
+    workforce_stations: [
+      { id: 'wf_station_host', name: 'Host Stand', department_id: 'wf_dept_service', location_id: WORKFORCE_DEFAULT_LOCATION_ID, active: true, created_at: nowIso() },
+      { id: 'wf_station_service', name: 'Main Floor', department_id: 'wf_dept_service', location_id: WORKFORCE_DEFAULT_LOCATION_ID, active: true, created_at: nowIso() },
+      { id: 'wf_station_bar', name: 'Main Bar', department_id: 'wf_dept_bar', location_id: WORKFORCE_DEFAULT_LOCATION_ID, active: true, created_at: nowIso() },
+      { id: 'wf_station_line', name: 'Hot Line', department_id: 'wf_dept_kitchen', location_id: WORKFORCE_DEFAULT_LOCATION_ID, active: true, created_at: nowIso() },
+      { id: 'wf_station_expo', name: 'Expo', department_id: 'wf_dept_kitchen', location_id: WORKFORCE_DEFAULT_LOCATION_ID, active: true, created_at: nowIso() },
+      { id: 'wf_station_dish', name: 'Dish', department_id: 'wf_dept_kitchen', location_id: WORKFORCE_DEFAULT_LOCATION_ID, active: true, created_at: nowIso() },
+    ],
+    workforce_roles: [
+      { id: 'wf_role_manager', name: 'Manager', department_id: 'wf_dept_management', default_station_id: 'wf_station_expo', labor_class: 'management', hourly_rate: 42, active: true, created_at: nowIso() },
+      { id: 'wf_role_host', name: 'Host', department_id: 'wf_dept_service', default_station_id: 'wf_station_host', labor_class: 'front_of_house', hourly_rate: 24, active: true, created_at: nowIso() },
+      { id: 'wf_role_server', name: 'Server', department_id: 'wf_dept_service', default_station_id: 'wf_station_service', labor_class: 'front_of_house', hourly_rate: 23, active: true, created_at: nowIso() },
+      { id: 'wf_role_bartender', name: 'Bartender', department_id: 'wf_dept_bar', default_station_id: 'wf_station_bar', labor_class: 'bar', hourly_rate: 30, active: true, created_at: nowIso() },
+      { id: 'wf_role_line_cook', name: 'Line Cook', department_id: 'wf_dept_kitchen', default_station_id: 'wf_station_line', labor_class: 'kitchen', hourly_rate: 28, active: true, created_at: nowIso() },
+      { id: 'wf_role_expo', name: 'Expo', department_id: 'wf_dept_kitchen', default_station_id: 'wf_station_expo', labor_class: 'kitchen', hourly_rate: 29, active: true, created_at: nowIso() },
+    ],
+    workforce_employees: [],
+    workforce_employee_roles: [],
+    workforce_shift_templates: [
+      {
+        id: 'wf_tpl_prep_am',
+        name: 'Prep AM',
+        role_id: 'wf_role_line_cook',
+        station_id: 'wf_station_line',
+        start_time: '06:00:00',
+        end_time: '14:00:00',
+        active: true,
+        created_at: nowIso(),
+      },
+      {
+        id: 'wf_tpl_service_host',
+        name: 'Host PM',
+        role_id: 'wf_role_host',
+        station_id: 'wf_station_host',
+        start_time: '17:00:00',
+        end_time: '23:00:00',
+        active: true,
+        created_at: nowIso(),
+      },
+      {
+        id: 'wf_tpl_service_bar',
+        name: 'Bar PM',
+        role_id: 'wf_role_bartender',
+        station_id: 'wf_station_bar',
+        start_time: '16:00:00',
+        end_time: '00:00:00',
+        active: true,
+        created_at: nowIso(),
+      },
+    ],
+    workforce_shifts: [],
+    workforce_schedule_templates: [],
+    workforce_schedule_template_shifts: [],
+    workforce_punches: [],
+    workforce_breaks: [],
+    workforce_time_off_requests: [],
+    workforce_pto_balances: [],
+    workforce_employee_documents: [],
+    workforce_tasks: [],
+    workforce_log_entries: [],
+    workforce_rules: [
+      {
+        id: 'wf_rule_ca_meal_1',
+        rule_code: 'CA_MEAL_1',
+        jurisdiction: 'CA',
+        trigger_event: 'PUNCH',
+        expression_json: '{"threshold_hours":5,"break_type":"meal"}',
+        block_or_warn: 'warn',
+        active: true,
+        created_at: nowIso(),
+      },
+      {
+        id: 'wf_rule_overtime_daily',
+        rule_code: 'OT_DAILY',
+        jurisdiction: 'CA',
+        trigger_event: 'PUNCH',
+        expression_json: '{"threshold_hours":8}',
+        block_or_warn: 'warn',
+        active: true,
+        created_at: nowIso(),
+      },
+    ],
+    workforce_events: [],
+    workforce_dashboard_snapshots: [],
+    team_members: [],
   };
 };
 
@@ -3229,6 +3183,18 @@ const ensureTastingMenuImport = (db: PlainObject) => {
   return changed;
 };
 
+// Keep legacy seed helpers available for optional future backfills.
+void [
+  buildDefaultTimeSlots,
+  seedMenu,
+  seedTastings,
+  defaultTeamMembers,
+  buildDefaultWorkforceSeed,
+  ensureCodaBeverageImport,
+  ensureCodaFoodImport,
+  ensureTastingMenuImport,
+];
+
 const migrateDb = (db: PlainObject) => {
   let changed = false;
   const eventImageByTitle: Record<string, string> = {
@@ -3449,23 +3415,6 @@ const migrateDb = (db: PlainObject) => {
     changed = true;
   }
 
-  if (Array.isArray(db.drive_thru_orders) && db.drive_thru_orders.length === 0) {
-    db.drive_thru_orders = buildDefaultDriveThruOrders();
-    changed = true;
-  }
-
-  if (ensureTastingMenuImport(db)) {
-    changed = true;
-  }
-
-  if (ensureCodaBeverageImport(db)) {
-    changed = true;
-  }
-
-  if (ensureCodaFoodImport(db)) {
-    changed = true;
-  }
-
   return { db, changed };
 };
 
@@ -3578,73 +3527,21 @@ const ensureTeamMembers = (db: PlainObject, users: PlainObject[]) => {
     return accumulator;
   }, {} as Record<string, string>);
 
-  defaultTeamMembers().forEach((defaultMember) => {
-    const existing = db.team_members.find((member: PlainObject) => member.user_id === defaultMember.user_id);
-    if (!existing) {
-      db.team_members.push({
-        ...defaultMember,
-        email: userEmailById[defaultMember.user_id] || defaultMember.email,
-      });
-      changed = true;
-      return;
-    }
+  db.team_members = db.team_members.map((member: PlainObject) => {
+    const nextMember = { ...member };
+    const memberUserId = String(nextMember.user_id || '');
 
-    if (!existing.email && userEmailById[defaultMember.user_id]) {
-      existing.email = userEmailById[defaultMember.user_id];
+    if (!nextMember.email && memberUserId && userEmailById[memberUserId]) {
+      nextMember.email = userEmailById[memberUserId];
       changed = true;
     }
 
-    if (existing.active === undefined) {
-      existing.active = true;
+    if (nextMember.active === undefined) {
+      nextMember.active = true;
       changed = true;
     }
 
-    if (existing.can_view_reservations === undefined) {
-      existing.can_view_reservations = Boolean(defaultMember.can_view_reservations);
-      changed = true;
-    }
-    if (existing.can_view_events_parties === undefined) {
-      existing.can_view_events_parties = Boolean(defaultMember.can_view_events_parties);
-      changed = true;
-    }
-    if (existing.can_view_classes === undefined) {
-      existing.can_view_classes = Boolean(defaultMember.can_view_classes);
-      changed = true;
-    }
-
-    const sectionAccessDefaults: Array<[string, boolean]> = [
-      ['can_access_menu_management', Boolean(defaultMember.can_access_menu_management)],
-      ['can_access_operations', Boolean(defaultMember.can_access_operations)],
-      ['can_access_workforce', Boolean(defaultMember.can_access_workforce)],
-      ['can_access_content_management', Boolean(defaultMember.can_access_content_management)],
-      ['can_access_career_management', Boolean(defaultMember.can_access_career_management)],
-      ['can_access_investment', Boolean(defaultMember.can_access_investment)],
-      ['can_access_settings', Boolean(defaultMember.can_access_settings)],
-    ];
-
-    sectionAccessDefaults.forEach(([field, fallback]) => {
-      if (existing[field] !== undefined) return;
-      existing[field] = fallback;
-      changed = true;
-    });
-
-    if (existing.operations_classes_read_only === undefined) {
-      existing.operations_classes_read_only = Boolean(defaultMember.operations_classes_read_only);
-      changed = true;
-    }
-
-    if (!existing.portal) {
-      existing.portal = defaultMember.portal;
-      changed = true;
-    }
-    if (!existing.name) {
-      existing.name = defaultMember.name;
-      changed = true;
-    }
-    if (!existing.title) {
-      existing.title = defaultMember.title;
-      changed = true;
-    }
+    return nextMember;
   });
 
   return changed;
@@ -3652,17 +3549,32 @@ const ensureTeamMembers = (db: PlainObject, users: PlainObject[]) => {
 
 const ensureWorkforceFoundation = (db: PlainObject, users: PlainObject[]) => {
   let changed = false;
-  const teamMembers = Array.isArray(db.team_members) && db.team_members.length > 0 ? db.team_members : defaultTeamMembers();
-  const seed = buildDefaultWorkforceSeed(teamMembers);
+  const workforceTables = [
+    'workforce_locations',
+    'workforce_departments',
+    'workforce_stations',
+    'workforce_roles',
+    'workforce_employees',
+    'workforce_employee_roles',
+    'workforce_shift_templates',
+    'workforce_shifts',
+    'workforce_schedule_templates',
+    'workforce_schedule_template_shifts',
+    'workforce_punches',
+    'workforce_breaks',
+    'workforce_time_off_requests',
+    'workforce_pto_balances',
+    'workforce_employee_documents',
+    'workforce_tasks',
+    'workforce_log_entries',
+    'workforce_rules',
+    'workforce_events',
+    'workforce_dashboard_snapshots',
+  ];
 
-  Object.entries(seed).forEach(([tableName, defaultRows]) => {
+  workforceTables.forEach((tableName) => {
     if (!Array.isArray(db[tableName])) {
       db[tableName] = [];
-      changed = true;
-    }
-
-    if (Array.isArray(defaultRows) && db[tableName].length === 0 && defaultRows.length > 0) {
-      db[tableName] = defaultRows.map((row) => ({ ...row }));
       changed = true;
     }
   });
@@ -3870,6 +3782,19 @@ class LocalStore {
     const usersChanged = ensureDefaultUsers(this.users);
     if (usersChanged) {
       this.saveUsers();
+    }
+
+    if (storageAvailable()) {
+      const resetVersion = window.localStorage.getItem(TEMPLATE_DATA_RESET_KEY);
+      if (resetVersion !== TEMPLATE_DATA_RESET_VERSION) {
+        this.db = buildDefaultDb();
+        this.session = null;
+        this.files = {};
+        this.saveDb();
+        this.saveSession();
+        this.saveFiles();
+        window.localStorage.setItem(TEMPLATE_DATA_RESET_KEY, TEMPLATE_DATA_RESET_VERSION);
+      }
     }
 
     if (ensureRoleAssignments(this.db, this.users)) {
